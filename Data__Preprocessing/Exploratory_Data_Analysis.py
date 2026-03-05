@@ -1,7 +1,7 @@
 class ExplanatoryDataAnalysis:
     def __init__(self):
         pass
-    def histogram(self):
+    def histograms(self):
         pass
     def control_chart(self):
         pass
@@ -9,5 +9,8 @@ class ExplanatoryDataAnalysis:
         pass
     def SMOTE(self):
         pass
+    def handle_outliers(self):
+        pass
+
 
 explanatory_data_analysis = ExplanatoryDataAnalysis()
