@@ -137,8 +137,3 @@ class Catboost(BaseModel):
         """CatBoost için hiperparametre optimizasyonu. (Henüz implement edilmedi)"""
         pass
 
-
-
-
-
-

@@ -98,10 +98,32 @@ class ExploratoryDataAnalysis(DataCleaning):
         plt.savefig(os.path.join(self.output_dir, "correlation.png"))
         plt.close()
 
-    def SMOTE(self):
-        """Dengesiz sınıf dağılımını SMOTE yöntemiyle dengeler. (Henüz implement edilmedi)"""
-        pass
+    def drop_high_missing(self, threshold: float = 0.10) -> pd.DataFrame:
+        """
+        Eksik deger orani threshold'un uzerinde olan sutunlari veri setinden cikarir.
+        :param threshold: Maksimum eksik deger orani (varsayilan %10).
+        :return: Sutunlari elenmis DataFrame.
+        """
+        missing_pct = self.df.isnull().mean()
+        cols_to_drop = missing_pct[missing_pct > threshold].index.tolist()
+        if cols_to_drop:
+            print(f"  Eksik orani >{threshold*100:.0f}% olan sutunlar silindi: {cols_to_drop}")
+            self.df = self.df.drop(columns=cols_to_drop)
+        return self.df
 
-    def handle_outliers(self):
-        """Aykırı değerleri tespit edip işler. (Henüz implement edilmedi)"""
-        pass
+    def handle_outliers(self) -> pd.DataFrame:
+        """
+        IQR yontemiyle aykiri degerleri tespit eder ve sinir degerlerine clip eder.
+        :return: Aykiri degerleri islenmis DataFrame.
+        """
+        self._ensure_info()
+        for col in self.numeric_cols:
+            if col == self.target_col:
+                continue
+            q1 = self.df[col].quantile(0.25)
+            q3 = self.df[col].quantile(0.75)
+            iqr = q3 - q1
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
+            self.df[col] = self.df[col].clip(lower=lower, upper=upper)
+        return self.df
