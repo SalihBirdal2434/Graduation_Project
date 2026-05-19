@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Analist - Kredi Sonuclari</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        height: 100vh;
+        background-image: url("{{ url_for('static', filename='logolar/background_analist_musteri.jpg') }}");
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-attachment: fixed;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: linear-gradient(to right, #0b1e3c, #3050a0);
+        color: white;
+        padding: 20px;
+        font-size: 28px;
+        text-align: left;
+      }
+
+      .footer {
+        background: linear-gradient(to right, #0b1e3c, #3050a0);
+        padding: 20px;
+        text-align: center;
+        font-size: 16px;
+        color: white;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        gap: 30px;
+        padding: 30px;
+        justify-content: center;
+        align-items: stretch;
+      }
+
+      .frame {
+        width: 700px;
+        padding: 30px;
+        border-radius: 10px;
+        overflow-y: auto;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        font-size: 17px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        text-align: justify;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(10px);
+      }
+
+      .image-panel {
+        width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .image-card {
+        background: rgba(255, 255, 255, 0.6);
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        transition: transform 0.2s;
+      }
+
+      .image-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .image-card img {
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .image-card h4 {
+        margin: 12px 0 6px;
+        font-size: 18px;
+        color: #0b1e3c;
+      }
+
+      .image-panel h1 {
+        margin: 12px 0 6px;
+        font-size: 25px;
+        color: #264653;
+      }
+
+      .image-card p {
+        font-size: 14px;
+        color: #333;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+
+      .modal img {
+        max-width: 90%;
+        max-height: 80%;
+      }
+
+      .modal .close {
+        position: absolute;
+        top: 20px;
+        right: 40px;
+        color: white;
+        font-size: 40px;
+        cursor: pointer;
+      }
+
+      .nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-size: 50px;
+        cursor: pointer;
+        user-select: none;
+        padding: 10px;
+      }
+
+      .nav.left {
+        left: 20px;
+      }
+
+      .nav.right {
+        right: 20px;
+      }
+
+      #modalCaption {
+        margin-top: 20px;
+        color: white;
+        font-size: 18px;
+        text-align: center;
+        max-width: 80%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">COMPRU Bankasi Analiz ve Degerlendirme Birimi</div>
+
+    {% if credit_ok %}
+    <div
+      class="header"
+      style="background: linear-gradient(to right, #0a6629, #5cbf57)"
+    >
+      Kredi Basvurunuz Onaylandi
+    </div>
+    {% else %}
+    <div
+      class="header"
+      style="background: linear-gradient(to right, #8b0000, #e53935)"
+    >
+      Kredi Basvurunuz Reddedildi
+    </div>
+    {% endif %}
+
+    <div class="content">
+      <div class="frame" id="resultText">
+        <p>Sayin {{ isim }} numarali musterimiz,</p>
+
+        {{ sonuc|safe }}
+        <p>Kredi basvurunuzda COMPRU Bankasini tercih ettiginiz icin tesekkur eder, esenlikler dileriz.</p>
+      </div>
+
+      <div class="image-panel">
+        <h1>Kisisel Kredi Skoru Analizi</h1>
+        <div class="image-card">
+          <img
+            src="/static/lime_musteri.png"
+            alt="LIME"
+            onclick="openModal(0)"
+          />
+          <h4>LIME Aciklamasi</h4>
+          <p>
+            Musterinin Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin LIME (Local Interpretable Model-agnostic Explanations)
+            Degerleri Ile Aciklanmasi
+          </p>
+        </div>
+
+        <div class="image-card">
+          <img
+            src="/static/shap_musteri.png"
+            alt="SHAP"
+            onclick="openModal(1)"
+          />
+          <h4>SHAP Aciklamasi</h4>
+          <p>Musterinin Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin SHAP (SHapley Additive exPlanations) Degerleri Ile Aciklanmasi</p>
+        </div>
+
+        <h1>Genel Kredi Skoru Analizi</h1>
+
+        <div class="image-card">
+          <img
+            src="{{ url_for('static', filename='logolar/output_analist.png') }}"
+            alt="Analist Grafigi"
+            onclick="openModal(2)"
+          />
+          <h4>COMPRU Bankasi Kredi Basvurusu Degerlendirme Modeli</h4>
+          <p>Musteri Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin SHAP (SHapley Additive exPlanations) Degerleri Ile Aciklanmasi</p>
+        </div>
+
+        <div class="image-card">
+          <img
+            src="{{ url_for('static', filename='logolar/output_permutation_importance.png') }}"
+            alt="Permutation"
+            onclick="openModal(3)"
+          />
+          <h4>COMPRU Bankasi Kredi Basvurusu Degerlendirme Modeli</h4>
+          <p>Musteri Finansal Gecmisi Degerlendirme Olcutlerinin Kredi Skoruna Etkisi Acisindan Onem Dereceleri</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="imageModal">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <span class="nav left" onclick="changeImage(-1)">&#10094;</span>
+      <img id="modalImg" src="" alt="Buyuk Gorsel" />
+      <span class="nav right" onclick="changeImage(1)">&#10095;</span>
+      <div id="modalCaption"></div>
+    </div>
+
+    <footer class="footer">&copy; 2025 COMPRU - Tum Haklari Saklidir.</footer>
+
+    <script>
+      const imageSources = [
+        "/static/lime_musteri.png",
+        "/static/shap_musteri.png",
+        "{{ url_for('static', filename='logolar/output_analist.png') }}",
+        "{{ url_for('static', filename='logolar/output_permutation_importance.png') }}",
+      ];
+
+      const captions = [
+        "Musterinin Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin LIME (Local Interpretable Model-agnostic Explanations) Degerleri Ile Aciklanmasi.",
+        "Musterinin Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin SHAP (SHapley Additive exPlanations) Degerleri Ile Aciklanmasi.",
+        "Musteri Finansal Gecmisinin Kredi Degerlendirmesine Etkisinin SHAP (SHapley Additive exPlanations) Degerleri Ile Aciklanmasi.",
+        "Musteri Finansal Gecmisi Degerlendirme Olcutlerinin Kredi Skoruna Etkisi Acisindan Onem Dereceleri.",
+      ];
+
+      let currentIndex = 0;
+
+      function openModal(index) {
+        currentIndex = index;
+        document.getElementById("modalImg").src = imageSources[index];
+        document.getElementById("modalCaption").innerText = captions[index];
+        document.getElementById("imageModal").style.display = "flex";
+      }
+
+      function closeModal() {
+        document.getElementById("imageModal").style.display = "none";
+      }
+
+      function changeImage(direction) {
+        currentIndex =
+          (currentIndex + direction + imageSources.length) %
+          imageSources.length;
+        document.getElementById("modalImg").src = imageSources[currentIndex];
+        document.getElementById("modalCaption").innerText =
+          captions[currentIndex];
+      }
+
+      function getQueryParam(param) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(param);
+      }
+
+      const isim = getQueryParam("isim");
+    </script>
+  </body>
+</html>
