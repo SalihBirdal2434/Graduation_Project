@@ -34,6 +34,7 @@ def analist():
     )
 
 
+
 @app.route("/musteri")
 def musteri():
     isim = request.args.get("isim", "Bilinmiyor")
