@@ -132,23 +132,18 @@ class XAI:
             q3 = self.shap_quartiles.loc[col, "Q3"]
 
             if abs_val <= q1:
-                quartile = "Q1 (Dusuk Etki)"
+                quartile = "Krediye Çok Düşük Etki"
             elif abs_val <= q2:
-                quartile = "Q2 (Orta-Dusuk Etki)"
+                quartile = "Krediye Düşük Etki"
             elif abs_val <= q3:
-                quartile = "Q3 (Orta-Yuksek Etki)"
+                quartile = "Krediye Yüksek Etki"
             else:
-                quartile = "Q4 (Yuksek Etki)"
+                quartile = "Krediye Çok Yüksek Etki"
 
-            direction = "Artiran" if local_shap[col] > 0 else "Azaltan"
 
             rows.append({
-                "feature": col,
                 "feature_tr": self._get_tr_name(col),
-                "shap_value": local_shap[col],
-                "abs_shap": abs_val,
                 "quartile": quartile,
-                "direction": direction,
             })
 
         result = pd.DataFrame(rows).sort_values("abs_shap", ascending=False)

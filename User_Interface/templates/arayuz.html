@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kredi Değerlendirmesi</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Georgia&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: "Georgia", serif;
+        background-image: url("{{ url_for('static', filename='logolar/background-arayuz.jpg') }}");
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-attachment: fixed;
+        display: flex;
+        flex-direction: column;
+      }
+
+      footer {
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(to right, #0b1e3c, #3050a0);
+        color: white;
+        margin-top: auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px;
+        flex-wrap: wrap;
+      }
+
+      footer img {
+        height: 50px;
+        margin-left: 10px;
+      }
+
+      h1 {
+        font-size: 40px;
+        color: white;
+        padding: 20px;
+        background: linear-gradient(to right, #0b1e3c, #3050a0);
+        margin: 0;
+        text-align: center;
+      }
+
+      .welcome {
+        text-align: center;
+        font-size: 40px;
+        color: white;
+        margin: 60px 0 20px;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(10px);
+        margin: 0 auto 40px;
+        padding: 40px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 750px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      }
+
+      label {
+        font-size: 22px;
+        display: block;
+        margin-top: 20px;
+        margin-bottom: 10px;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        border: none;
+        background: #f3eded;
+        border-radius: 25px;
+        box-sizing: border-box;
+      }
+
+      .buttons {
+        margin-top: 30px;
+        text-align: center;
+      }
+
+      .btn {
+        background-color: #0b1e3c;
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 30px;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn:hover {
+        background-color: #122e5b;
+        transform: scale(0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>COMPRU Bankasi Analiz ve Degerlendirme Birimi</h1>
+
+    <div class="welcome">Hosgeldiniz</div>
+
+    <div class="container">
+      <label for="name">Musteri Adi:</label>
+      <input type="text" id="name" placeholder="Isim Soyisim" />
+
+      <label for="role">Goruntuleyen:</label>
+      <select id="role">
+        <option value="">Seciniz</option>
+        <option value="analist">Analist</option>
+        <option value="musteri">Musteri</option>
+      </select>
+
+      <div class="buttons">
+        <button class="btn" onclick="redirect()">Sonuclari Gor</button>
+      </div>
+    </div>
+
+    <footer>
+      &copy; 2025 COMPRU - Tum Haklari Saklidir.
+      <img src="{{ url_for('static', filename='logolar/compru.png') }}" />
+      <img src="{{ url_for('static', filename='logolar/teknofest.png') }}" />
+      <img src="{{ url_for('static', filename='logolar/milliteknolojihamlesi.png') }}" />
+      <img src="{{ url_for('static', filename='logolar/T3.png') }}" />
+    </footer>
+
+    <script>
+      function redirect() {
+        const name = document.getElementById("name").value.trim();
+        const role = document.getElementById("role").value;
+
+        if (!name || !role) {
+          alert("Lutfen tum alanlari doldurun.");
+          return;
+        }
+
+        const index = isNaN(name) ? 10 : parseInt(name);
+        window.location.href = `/${role}?isim=${encodeURIComponent(name)}&index=${index}`;
+      }
+    </script>
+  </body>
+</html>

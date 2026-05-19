@@ -1,36 +1,45 @@
 from abc import ABC, abstractmethod
+import numpy as np
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
+from sklearn.model_selection import RandomizedSearchCV
 from Data__Preprocessing.Feature_Selection import EnsembleFeatureSelector
 
 
 class BaseModel(EnsembleFeatureSelector, ABC):
-    """Tüm makine öğrenmesi modelleri için temel soyut sınıf."""
+    """Tum makine ogrenmesi modelleri icin temel soyut sinif."""
 
     def __init__(self, df, target_col="Class", **kwargs):
         EnsembleFeatureSelector.__init__(self, df, target_col)
         self.model = None
         self.params = kwargs
+        self.best_params = None
+
+    def _calc_scale_pos_weight(self) -> float:
+        """Imbalanced veri icin negatif/pozitif sinif oranini hesaplar."""
+        if self.y_train is None:
+            return 1.0
+        counts = self.y_train.value_counts()
+        if len(counts) < 2:
+            return 1.0
+        return counts[0] / counts[1]
 
     @abstractmethod
     def train(self) -> None:
-        """Modeli eğitir."""
         pass
 
     @abstractmethod
     def predict(self):
-        """Tahmin yapar."""
         pass
 
     @abstractmethod
     def tune_hyperparameters(self):
-        """Bu modele özel hiperparametre optimizasyonu yapar."""
         pass
 
 
 class XGBoostModel(BaseModel):
-    """XGBoost algoritmasının implementasyonu."""
+    """XGBoost algoritmasi."""
 
     DEFAULT_PARAMS = {
         "n_estimators": 300,
@@ -49,7 +58,6 @@ class XGBoostModel(BaseModel):
         self.model = XGBClassifier(**params)
 
     def train(self) -> None:
-        """X_train ve y_train ile modeli eğitir. cat_cols varsa category tipine çevirir."""
         for col in self.cat_cols:
             if col in self.X_train.columns:
                 self.X_train[col] = self.X_train[col].astype("category")
@@ -57,17 +65,58 @@ class XGBoostModel(BaseModel):
         self.model.fit(self.X_train, self.y_train)
 
     def predict(self):
-        """X_test üzerinde tahmin yapar ve y_test ile karşılaştırır."""
         self.y_pred = self.model.predict(self.X_test)
         return self.y_pred
 
-    def tune_hyperparameters(self):
-        """XGBoost için hiperparametre optimizasyonu. (Henüz implement edilmedi)"""
-        pass
+    def tune_hyperparameters(self, n_iter=30, cv=3, scoring="f1"):
+        """XGBoost icin RandomizedSearchCV ile hiperparametre optimizasyonu."""
+        spw = self._calc_scale_pos_weight()
+        print(f"    scale_pos_weight = {spw:.2f}")
+
+        param_distributions = {
+            "n_estimators": [100, 200, 300, 500],
+            "max_depth": [4, 5, 6, 7, 8],
+            "learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "subsample": [0.7, 0.8, 0.9, 1.0],
+            "colsample_bytree": [0.6, 0.7, 0.8, 0.9, 1.0],
+            "min_child_weight": [1, 3, 5, 7],
+            "gamma": [0, 0.1, 0.2, 0.3],
+            "scale_pos_weight": [spw],
+        }
+
+        base_model = XGBClassifier(
+            enable_categorical=True,
+            random_state=42,
+            eval_metric="logloss",
+        )
+
+        search = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_distributions,
+            n_iter=n_iter,
+            cv=cv,
+            scoring=scoring,
+            random_state=42,
+            n_jobs=-1,
+            verbose=0,
+        )
+
+        for col in self.cat_cols:
+            if col in self.X_train.columns:
+                self.X_train[col] = self.X_train[col].astype("category")
+                self.X_test[col] = self.X_test[col].astype("category")
+
+        search.fit(self.X_train, self.y_train)
+
+        self.best_params = search.best_params_
+        self.model = search.best_estimator_
+        print(f"    Best F1 (CV): {search.best_score_:.4f}")
+        print(f"    Best params: {self.best_params}")
+        return self.best_params
 
 
 class LightGBM(BaseModel):
-    """LightGBM algoritmasının implementasyonu."""
+    """LightGBM algoritmasi."""
 
     DEFAULT_PARAMS = {
         "n_estimators": 300,
@@ -86,7 +135,6 @@ class LightGBM(BaseModel):
         self.model = LGBMClassifier(**params)
 
     def train(self) -> None:
-        """X_train ve y_train ile modeli eğitir. cat_cols varsa LightGBM'e bildirir."""
         cat_indices = [self.X_train.columns.tolist().index(c) for c in self.cat_cols if c in self.X_train.columns]
         self.model.fit(
             self.X_train, self.y_train,
@@ -94,17 +142,54 @@ class LightGBM(BaseModel):
         )
 
     def predict(self):
-        """X_test üzerinde tahmin yapar ve y_test ile karşılaştırır."""
         self.y_pred = self.model.predict(self.X_test)
         return self.y_pred
 
-    def tune_hyperparameters(self):
-        """LightGBM için hiperparametre optimizasyonu. (Henüz implement edilmedi)"""
-        pass
+    def tune_hyperparameters(self, n_iter=30, cv=3, scoring="f1"):
+        """LightGBM icin RandomizedSearchCV ile hiperparametre optimizasyonu."""
+        spw = self._calc_scale_pos_weight()
+        print(f"    scale_pos_weight = {spw:.2f}")
+
+        param_distributions = {
+            "n_estimators": [100, 200, 300, 500],
+            "max_depth": [3, 5, 7, -1],
+            "learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "num_leaves": [15, 31, 50, 80],
+            "subsample": [0.7, 0.8, 0.9, 1.0],
+            "colsample_bytree": [0.6, 0.7, 0.8, 0.9, 1.0],
+            "min_child_samples": [5, 10, 20, 30],
+            "reg_alpha": [0, 0.01, 0.1],
+            "reg_lambda": [0, 0.01, 0.1, 1.0],
+            "is_unbalance": [True],
+        }
+
+        base_model = LGBMClassifier(
+            random_state=42,
+            verbose=-1,
+        )
+
+        search = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_distributions,
+            n_iter=n_iter,
+            cv=cv,
+            scoring=scoring,
+            random_state=42,
+            n_jobs=-1,
+            verbose=0,
+        )
+
+        search.fit(self.X_train, self.y_train)
+
+        self.best_params = search.best_params_
+        self.model = search.best_estimator_
+        print(f"    Best F1 (CV): {search.best_score_:.4f}")
+        print(f"    Best params: {self.best_params}")
+        return self.best_params
 
 
 class Catboost(BaseModel):
-    """CatBoost algoritmasının implementasyonu."""
+    """CatBoost algoritmasi."""
 
     DEFAULT_PARAMS = {
         "iterations": 500,
@@ -121,7 +206,6 @@ class Catboost(BaseModel):
         self.model = CatBoostClassifier(**params)
 
     def train(self) -> None:
-        """X_train ve y_train ile modeli eğitir. cat_cols varsa CatBoost'a native olarak verir."""
         cat_indices = [self.X_train.columns.tolist().index(c) for c in self.cat_cols if c in self.X_train.columns]
         self.model.fit(
             self.X_train, self.y_train,
@@ -129,11 +213,42 @@ class Catboost(BaseModel):
         )
 
     def predict(self):
-        """X_test üzerinde tahmin yapar ve y_test ile karşılaştırır."""
         self.y_pred = self.model.predict(self.X_test)
         return self.y_pred
 
-    def tune_hyperparameters(self):
-        """CatBoost için hiperparametre optimizasyonu. (Henüz implement edilmedi)"""
-        pass
+    def tune_hyperparameters(self, n_iter=20, cv=3, scoring="f1"):
+        """CatBoost icin RandomizedSearchCV ile hiperparametre optimizasyonu."""
+        print(f"    auto_class_weights = Balanced")
 
+        param_distributions = {
+            "iterations": [200, 300, 500, 700],
+            "depth": [4, 5, 6, 7, 8],
+            "learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "l2_leaf_reg": [1, 3, 5, 7, 9],
+            "border_count": [32, 64, 128],
+            "auto_class_weights": ["Balanced"],
+        }
+
+        base_model = CatBoostClassifier(
+            random_seed=42,
+            verbose=0,
+        )
+
+        search = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_distributions,
+            n_iter=n_iter,
+            cv=cv,
+            scoring=scoring,
+            random_state=42,
+            n_jobs=-1,
+            verbose=0,
+        )
+
+        search.fit(self.X_train, self.y_train)
+
+        self.best_params = search.best_params_
+        self.model = search.best_estimator_
+        print(f"    Best F1 (CV): {search.best_score_:.4f}")
+        print(f"    Best params: {self.best_params}")
+        return self.best_params
